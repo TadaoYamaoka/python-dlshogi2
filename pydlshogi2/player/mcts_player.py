@@ -76,6 +76,7 @@ class MCTSPlayer(BasePlayer):
     DEFAULT_MODELFILE = 'checkpoints/checkpoint.pth'
 
     def __init__(self):
+        super().__init__()
         # チェックポイントのパス
         self.modelfile = self.DEFAULT_MODELFILE
         # モデル
@@ -92,9 +93,10 @@ class MCTSPlayer(BasePlayer):
         # ゲーム木
         self.tree = NodeTree()
         
-        # プレイアウト回数管理
+        # プレイアウト回数
         self.playout_count = 0
-        self.const_playout = 0
+        # 中断するプレイアウト回数
+        self.halt = None
 
         # GPU ID
         self.gpu_id = DEFAULT_GPU_ID
@@ -120,6 +122,7 @@ class MCTSPlayer(BasePlayer):
 
     def usi(self):
         print('id name ' + self.name)
+        print('option name USI_Ponder type check default false')
         print('option name modelfile type string default ' + self.DEFAULT_MODELFILE)
         print('option name gpu_id type spin default ' + str(DEFAULT_GPU_ID) + ' min -1 max 7')
         print('option name batchsize type spin default ' + str(DEFAULT_BATCH_SIZE) + ' min 1 max 256')
@@ -130,7 +133,6 @@ class MCTSPlayer(BasePlayer):
         print('option name byoyomi_margin type spin default ' + str(DEFAULT_BYOYOMI_MARGIN) + ' min 0 max 1000')
         print('option name pv_interval type spin default ' + str(DEFAULT_PV_INTERVAL) + ' min 0 max 10000')
         print('option name debug type check default false')
-        print('usiok', flush=True)
 
     def setoption(self, args):
         if args[1] == 'modelfile':
@@ -192,8 +194,6 @@ class MCTSPlayer(BasePlayer):
         for _ in range(self.batch_size):
             self.queue_node(self.root_board, current_node)
         self.eval_node()
-
-        print('readyok', flush=True)
     
     def position(self, args):
         if args[0] == 'startpos':
@@ -211,16 +211,14 @@ class MCTSPlayer(BasePlayer):
         if self.debug:
             print(self.root_board)
     
-    def go(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None):
+    def go(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
         # 投了チェック
         if self.root_board.is_game_over():
-            print('bestmove resign', flush=True)
-            return
+            return 'resign', None
 
         # 入玉宣言勝ちチェック
         if self.root_board.is_nyugyoku():
-            print('bestmove win', flush=True)
-            return
+            return 'win', None
 
         # プレイアウト数をクリア
         self.playout_count = 0
@@ -229,27 +227,7 @@ class MCTSPlayer(BasePlayer):
         self.begin_time = time.time()
 
         # 探索回数の閾値を設定
-        if nodes:
-            # プレイアウト数固定
-            self.const_playout = nodes
-        else:
-            remaining_time, inc = (btime, binc) if self.root_board.turn == BLACK else (wtime, winc)
-            if remaining_time is None and byoyomi is None and inc is None:
-                # 時間指定がない場合
-                self.const_playout = DEFAULT_CONST_PLAYOUT
-            else:
-                self.const_playout = 0
-                self.minimum_time = 0
-                remaining_time = int(remaining_time) if remaining_time else 0
-                inc = int(inc) if inc else 0
-                self.time_limit = remaining_time / (14 + max(0, 30 - self.root_board.move_number)) + inc
-                # 秒読みの場合
-                if byoyomi:
-                    byoyomi = int(byoyomi) - self.byoyomi_margin
-                    self.minimum_time = byoyomi
-                    # time_limitが秒読み以下の場合、秒読みに設定
-                    if self.time_limit < byoyomi:
-                        self.time_limit = byoyomi
+        self.set_limits(btime, wtime, byoyomi, binc, winc, nodes, infinite, ponder)
 
         # ルートノードが未展開の場合、展開する
         current_node = self.tree.current_head
@@ -258,8 +236,11 @@ class MCTSPlayer(BasePlayer):
 
         # 候補手が1つの場合は、その手を返す
         if len(current_node.child_move) == 1:
-            print('bestmove', move_to_usi(current_node.child_move[0]), flush=True)
-            return
+            if current_node.child_move_count[0] > 0:
+                bestmove, bestvalue, ponder_move = self.get_bestmove_and_print_pv()
+                return move_to_usi(bestmove), move_to_usi(ponder_move) if ponder_move else None
+            else:
+                return move_to_usi(current_node.child_move[0]), None
 
         # ルートノードが未評価の場合、評価する
         if current_node.value is None:
@@ -271,7 +252,7 @@ class MCTSPlayer(BasePlayer):
         self.search()
 
         # 最善手の取得とPVの表示
-        bestmove, bestvalue = self.get_bestmove_and_print_pv()
+        bestmove, bestvalue, ponder_move = self.get_bestmove_and_print_pv()
 
         # for debug
         if self.debug:
@@ -284,13 +265,59 @@ class MCTSPlayer(BasePlayer):
 
         # 閾値未満の場合投了
         if bestvalue < self.resign_threshold:
-            print('bestmove resign', flush=True)
-            return
+            return 'resign', None
 
-        print('bestmove', move_to_usi(bestmove), flush=True)
+        return move_to_usi(bestmove), move_to_usi(ponder_move) if ponder_move else None
+
+    def stop(self):
+        # すぐに中断する
+        self.halt = 0
+
+    def ponderhit(self, last_condition, elapsed):
+        # 探索開始時刻の記録
+        self.begin_time = time.time()
+        self.last_pv_print_time = 0
+
+        # 前回のgoで渡された持ち時間から経過時間を引く
+        key = ('btime', 'wtime')[self.root_board.turn]
+        if key in last_condition:
+            last_condition[key] = max(last_condition[key] - elapsed, 0)
+
+        # 探索回数の閾値を設定
+        self.set_limits(**last_condition)
+
+    def quit(self):
+        self.stop()
+
+    def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
+        # 探索回数の閾値を設定
+        if infinite or ponder:
+            # infiniteもしくはponderの場合は、探索を打ち切らないため、32ビット整数の最大値を設定する
+            self.halt = 2**31-1
+        elif nodes:
+            # プレイアウト数固定
+            self.halt = nodes
+        else:
+            remaining_time, inc = (btime, binc) if self.root_board.turn == BLACK else (wtime, winc)
+            if remaining_time is None and byoyomi is None and inc is None:
+                # 時間指定がない場合
+                self.halt = DEFAULT_CONST_PLAYOUT
+            else:
+                self.minimum_time = 0
+                remaining_time = int(remaining_time) if remaining_time else 0
+                inc = int(inc) if inc else 0
+                self.time_limit = remaining_time / (14 + max(0, 30 - self.root_board.move_number)) + inc
+                # 秒読みの場合
+                if byoyomi:
+                    byoyomi = int(byoyomi) - self.byoyomi_margin
+                    self.minimum_time = byoyomi
+                    # time_limitが秒読み以下の場合、秒読みに設定
+                    if self.time_limit < byoyomi:
+                        self.time_limit = byoyomi
+                self.halt = None
 
     def search(self):
-        last_pv_print_time = 0
+        self.last_pv_print_time = 0
 
         # 探索経路のバッチ
         trajectories_batch = []
@@ -355,8 +382,8 @@ class MCTSPlayer(BasePlayer):
             # PV表示
             if self.pv_interval > 0:
                 elapsed_time = int((time.time() - self.begin_time) * 1000)
-                if elapsed_time > last_pv_print_time + self.pv_interval:
-                    last_pv_print_time = elapsed_time
+                if elapsed_time > self.last_pv_print_time + self.pv_interval:
+                    self.last_pv_print_time = elapsed_time
                     self.get_bestmove_and_print_pv()
 
     # UCT探索
@@ -476,6 +503,7 @@ class MCTSPlayer(BasePlayer):
 
         # PV
         pv = move_to_usi(bestmove)
+        ponder_move = None
         pv_node = current_node
         while pv_node.child_node:
             pv_node = pv_node.child_node[selected_index]
@@ -483,6 +511,8 @@ class MCTSPlayer(BasePlayer):
                 break
             selected_index = np.argmax(pv_node.child_move_count)
             pv += ' ' + move_to_usi(pv_node.child_move[selected_index])
+            if ponder_move is None:
+                ponder_move = pv_node.child_move[selected_index]
 
         print('info nps {} time {} nodes {} score cp {} pv {}'.format(
             int(self.playout_count / finish_time),
@@ -490,13 +520,13 @@ class MCTSPlayer(BasePlayer):
             current_node.move_count,
             cp, pv), flush=True)
 
-        return bestmove, bestvalue
+        return bestmove, bestvalue, ponder_move
 
     # 探索を打ち切るか確認
     def check_interruption(self):
         # プレイアウト数数が閾値を超えている
-        if self.const_playout > 0:
-            return self.playout_count >= self.const_playout
+        if self.halt is not None:
+            return self.playout_count >= self.halt
 
         # 消費時間
         spend_time = int((time.time() - self.begin_time) * 1000)
