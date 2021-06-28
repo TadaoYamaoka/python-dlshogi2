@@ -28,7 +28,7 @@ class UctNode:
         if self.child_move and self.child_node:
             # 一つを残して削除する
             for i in range(len(self.child_move)):
-                if self.child_move.move == move:
+                if self.child_move[i] == move:
                     if self.child_node[i]:
                         # 新しいノードを作成する
                         self.child_node[i] = UctNode()
