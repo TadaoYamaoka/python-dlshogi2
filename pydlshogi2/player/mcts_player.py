@@ -211,7 +211,35 @@ class MCTSPlayer(BasePlayer):
         if self.debug:
             print(self.root_board)
     
-    def go(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
+    def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
+        # 探索回数の閾値を設定
+        if infinite or ponder:
+            # infiniteもしくはponderの場合は、探索を打ち切らないため、32ビット整数の最大値を設定する
+            self.halt = 2**31-1
+        elif nodes:
+            # プレイアウト数固定
+            self.halt = nodes
+        else:
+            self.remaining_time, inc = (btime, binc) if self.root_board.turn == BLACK else (wtime, winc)
+            if self.remaining_time is None and byoyomi is None and inc is None:
+                # 時間指定がない場合
+                self.halt = DEFAULT_CONST_PLAYOUT
+            else:
+                self.minimum_time = 0
+                self.remaining_time = int(self.remaining_time) if self.remaining_time else 0
+                inc = int(inc) if inc else 0
+                self.time_limit = self.remaining_time / (14 + max(0, 30 - self.root_board.move_number)) + inc
+                # 秒読みの場合
+                if byoyomi:
+                    byoyomi = int(byoyomi) - self.byoyomi_margin
+                    self.minimum_time = byoyomi
+                    # time_limitが秒読み以下の場合、秒読みに設定
+                    if self.time_limit < byoyomi:
+                        self.time_limit = byoyomi
+                self.extend_time = self.time_limit > self.minimum_time
+                self.halt = None
+
+    def go(self):
         # 投了チェック
         if self.root_board.is_game_over():
             return 'resign', None
@@ -225,9 +253,6 @@ class MCTSPlayer(BasePlayer):
 
         # 探索開始時刻の記録
         self.begin_time = time.time()
-
-        # 探索回数の閾値を設定
-        self.set_limits(btime, wtime, byoyomi, binc, winc, nodes, infinite, ponder)
 
         # ルートノードが未展開の場合、展開する
         current_node = self.tree.current_head
@@ -273,49 +298,21 @@ class MCTSPlayer(BasePlayer):
         # すぐに中断する
         self.halt = 0
 
-    def ponderhit(self, last_condition, elapsed):
+    def ponderhit(self, last_limits, elapsed):
         # 探索開始時刻の記録
         self.begin_time = time.time()
         self.last_pv_print_time = 0
 
         # 前回のgoで渡された持ち時間から経過時間を引く
         key = ('btime', 'wtime')[self.root_board.turn]
-        if key in last_condition:
-            last_condition[key] = max(last_condition[key] - elapsed, 0)
+        if key in last_limits:
+            last_limits[key] = max(last_limits[key] - elapsed, 0)
 
         # 探索回数の閾値を設定
-        self.set_limits(**last_condition)
+        self.set_limits(**last_limits)
 
     def quit(self):
         self.stop()
-
-    def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
-        # 探索回数の閾値を設定
-        if infinite or ponder:
-            # infiniteもしくはponderの場合は、探索を打ち切らないため、32ビット整数の最大値を設定する
-            self.halt = 2**31-1
-        elif nodes:
-            # プレイアウト数固定
-            self.halt = nodes
-        else:
-            self.remaining_time, inc = (btime, binc) if self.root_board.turn == BLACK else (wtime, winc)
-            if self.remaining_time is None and byoyomi is None and inc is None:
-                # 時間指定がない場合
-                self.halt = DEFAULT_CONST_PLAYOUT
-            else:
-                self.minimum_time = 0
-                self.remaining_time = int(self.remaining_time) if self.remaining_time else 0
-                inc = int(inc) if inc else 0
-                self.time_limit = self.remaining_time / (14 + max(0, 30 - self.root_board.move_number)) + inc
-                # 秒読みの場合
-                if byoyomi:
-                    byoyomi = int(byoyomi) - self.byoyomi_margin
-                    self.minimum_time = byoyomi
-                    # time_limitが秒読み以下の場合、秒読みに設定
-                    if self.time_limit < byoyomi:
-                        self.time_limit = byoyomi
-                self.extend_time = self.time_limit > self.minimum_time
-                self.halt = None
 
     def search(self):
         self.last_pv_print_time = 0

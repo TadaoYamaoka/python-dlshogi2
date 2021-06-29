@@ -21,13 +21,16 @@ class BasePlayer:
     def position(self, args):
         pass
 
-    def go(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
+    def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
+        pass
+
+    def go(self):
         pass
 
     def stop(self):
         pass
 
-    def ponderhit(self, last_condition, elapsed):
+    def ponderhit(self, last_limits, elapsed):
         pass
 
     def quit(self):
@@ -64,16 +67,14 @@ class BasePlayer:
                         for i in range(0, len(args) - 1, 2):
                             if args[i] in ['btime', 'wtime', 'byoyomi', 'binc', 'winc', 'nodes']:
                                 kwargs[args[i]] = int(args[i + 1])
+                self.set_limits(**kwargs)
                 start_time = time.time()
-                self.future = self.executor.submit(self.go, **kwargs)
-                if 'ponder' in kwargs:
-                    # ponderhitのために経過時間を加算
-                    elapsed += int((time.time() - start_time) *  1000)
-                elif 'infinite' not in kwargs:
+                self.future = self.executor.submit(self.go)
+                if 'ponder' not in kwargs and 'infinite' not in kwargs:
                     bestmove, ponder_move = self.future.result()
                     print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
                     # ponderhitのために条件と経過時間を保存
-                    last_condition = kwargs
+                    last_limits = kwargs
                     elapsed = int((time.time() - start_time) *  1000)
             elif cmd[0] == 'stop':
                 self.stop()
@@ -81,9 +82,10 @@ class BasePlayer:
                 print('bestmove ' + bestmove, flush=True)
             elif cmd[0] == 'ponderhit':
                 start_time = time.time()
-                self.ponderhit(last_condition, elapsed)
+                self.ponderhit(last_limits, elapsed)
                 bestmove, ponder_move = self.future.result()
                 print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
+                elapsed += int((time.time() - start_time) *  1000)
             elif cmd[0] == 'quit':
                 self.quit()
                 break
