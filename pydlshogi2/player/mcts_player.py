@@ -298,15 +298,15 @@ class MCTSPlayer(BasePlayer):
             # プレイアウト数固定
             self.halt = nodes
         else:
-            remaining_time, inc = (btime, binc) if self.root_board.turn == BLACK else (wtime, winc)
-            if remaining_time is None and byoyomi is None and inc is None:
+            self.remaining_time, inc = (btime, binc) if self.root_board.turn == BLACK else (wtime, winc)
+            if self.remaining_time is None and byoyomi is None and inc is None:
                 # 時間指定がない場合
                 self.halt = DEFAULT_CONST_PLAYOUT
             else:
                 self.minimum_time = 0
-                remaining_time = int(remaining_time) if remaining_time else 0
+                self.remaining_time = int(self.remaining_time) if self.remaining_time else 0
                 inc = int(inc) if inc else 0
-                self.time_limit = remaining_time / (14 + max(0, 30 - self.root_board.move_number)) + inc
+                self.time_limit = self.remaining_time / (14 + max(0, 30 - self.root_board.move_number)) + inc
                 # 秒読みの場合
                 if byoyomi:
                     byoyomi = int(byoyomi) - self.byoyomi_margin
@@ -314,6 +314,7 @@ class MCTSPlayer(BasePlayer):
                     # time_limitが秒読み以下の場合、秒読みに設定
                     if self.time_limit < byoyomi:
                         self.time_limit = byoyomi
+                self.extend_time = self.time_limit > self.minimum_time
                 self.halt = None
 
     def search(self):
@@ -531,26 +532,42 @@ class MCTSPlayer(BasePlayer):
         # 消費時間
         spend_time = int((time.time() - self.begin_time) * 1000)
 
-        # 消費時間が予定時間を超えている
-        if spend_time >= self.time_limit:
-            return True
-
         # 消費時間が短すぎる場合、もしくは秒読みの場合は打ち切らない
         if spend_time * 10 < self.time_limit or spend_time < self.minimum_time:
             return False
 
-        # 探索回数が最も多い手と次に多い手を求める
-        child_move_count = self.tree.current_head.child_move_count
-        second, first = child_move_count[np.argpartition(child_move_count, -2)[-2:]]
+        # 消費時間が予定時間を超えていない場合
+        if spend_time < self.time_limit:
+            # 探索回数が最も多い手と次に多い手を求める
+            current_node = self.tree.current_head
+            child_move_count = current_node.child_move_count
+            second_index, first_index = np.argpartition(child_move_count, -2)[-2:]
+            second, first = child_move_count[[second_index, first_index]]
 
-        # 探索速度から残りの時間で探索できるプレイアウト数を見積もる
-        rest = int(self.playout_count * ((self.time_limit - spend_time) / spend_time))
+            # 探索速度から残りの時間で探索できるプレイアウト数を見積もる
+            rest = int(self.playout_count * ((self.time_limit - spend_time) / spend_time))
 
-        # 残りの探索を全て次善手に費やしても最善手を超えられない場合は探索を打ち切る
-        if first - second > rest:
-            return True
-        else:
+            # 残りの探索で次善手が最善手を超える可能性がある場合は打ち切らない
+            if first - second <= rest:
+                return False
+
+        # 探索延長
+        #   21手目以降かつ、残り時間がある場合、
+        #   最善手の探索回数が次善手の探索回数の1.5倍未満
+		#   もしくは、勝率が逆なら探索延長する
+        if self.extend_time and \
+           self.root_board.move_number > 20 and \
+           self.remaining_time > self.time_limit * 2 and \
+           (first < second * 1.5 or
+            current_node.child_sum_value[first_index] / child_move_count[first_index] < current_node.child_sum_value[second_index] / child_move_count[second_index]):
+            # 探索時間を2倍に延長
+            self.time_limit *= 2
+            # 探索延長は1回のみ
+            self.extend_time = False
+            print('info string extend_time')
             return False
+
+        return True
 
     # 入力特徴量の作成
     def make_input_features(self, board):
