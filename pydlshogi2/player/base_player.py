@@ -85,7 +85,7 @@ class BasePlayer:
                 self.ponderhit(last_limits, elapsed)
                 bestmove, ponder_move = self.future.result()
                 print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
-                elapsed += int((time.time() - start_time) *  1000)
+                elapsed = int((time.time() - start_time) *  1000)
             elif cmd[0] == 'quit':
                 self.quit()
                 break
