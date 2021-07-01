@@ -533,20 +533,18 @@ class MCTSPlayer(BasePlayer):
         if spend_time * 10 < self.time_limit or spend_time < self.minimum_time:
             return False
 
-        # 消費時間が予定時間を超えていない場合
-        if spend_time < self.time_limit:
-            # 探索回数が最も多い手と次に多い手を求める
-            current_node = self.tree.current_head
-            child_move_count = current_node.child_move_count
-            second_index, first_index = np.argpartition(child_move_count, -2)[-2:]
-            second, first = child_move_count[[second_index, first_index]]
+        # 探索回数が最も多い手と次に多い手を求める
+        current_node = self.tree.current_head
+        child_move_count = current_node.child_move_count
+        second_index, first_index = np.argpartition(child_move_count, -2)[-2:]
+        second, first = child_move_count[[second_index, first_index]]
 
-            # 探索速度から残りの時間で探索できるプレイアウト数を見積もる
-            rest = int(self.playout_count * ((self.time_limit - spend_time) / spend_time))
+        # 探索速度から残りの時間で探索できるプレイアウト数を見積もる
+        rest = int(self.playout_count * ((self.time_limit - spend_time) / spend_time))
 
-            # 残りの探索で次善手が最善手を超える可能性がある場合は打ち切らない
-            if first - second <= rest:
-                return False
+        # 残りの探索で次善手が最善手を超える可能性がある場合は打ち切らない
+        if first - second <= rest:
+            return False
 
         # 探索延長
         #   21手目以降かつ、残り時間がある場合、
