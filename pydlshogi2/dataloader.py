@@ -49,10 +49,16 @@ class HcpeDataLoader:
                 hcpe['bestMove16'], self.board.turn)
             self.result[i] = make_result(hcpe['gameResult'], self.board.turn)
 
-        return (self.torch_features.to(self.device),
-                self.torch_move_label.to(self.device),
-                self.torch_result.to(self.device),
-                )
+        if self.device.type == 'cpu':
+            return (self.torch_features.clone(),
+                    self.torch_move_label.clone(),
+                    self.torch_result.clone(),
+                    )
+        else:
+            return (self.torch_features.to(self.device),
+                    self.torch_move_label.to(self.device),
+                    self.torch_result.to(self.device),
+                    )
 
     def sample(self):
         return self.mini_batch(np.random.choice(self.data, self.batch_size, replace=False))
