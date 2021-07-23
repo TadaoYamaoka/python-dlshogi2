@@ -29,7 +29,7 @@ class UctNode:
             # 一つを残して削除する
             for i in range(len(self.child_move)):
                 if self.child_move[i] == move:
-                    if self.child_node[i]:
+                    if self.child_node[i] is None:
                         # 新しいノードを作成する
                         self.child_node[i] = UctNode()
                     # 子ノードを一つにする
@@ -37,14 +37,18 @@ class UctNode:
                         self.child_move = [move]
                         self.child_move_count = None
                         self.child_sum_value = None
+                        self.policy = None
                         self.child_node = [self.child_node[i]]
                     return self.child_node[0]
-        else:
-            # 子ノードが未展開、または子ノードリストが未初期化の場合
-            self.child_move = [move]
-            # 子ノードのリストを初期化する
-            self.child_node = [UctNode()]
-            return self.child_node[0]
+            
+        # 子ノードが見つからなかった場合、または子ノードが未展開、または子ノードリストが未初期化の場合
+        self.child_move = [move]
+        self.child_move_count = None
+        self.child_sum_value = None
+        self.policy = None
+        # 子ノードのリストを初期化する
+        self.child_node = [UctNode()]
+        return self.child_node[0]
 
 class NodeTree:
     def __init__(self):
@@ -53,8 +57,7 @@ class NodeTree:
         self.history_starting_pos_key = None
 
     # ゲーム木内の位置を設定し、サブツリーの再利用を試みる
-    def reset_to_position(self, board, moves):
-        starting_pos_key = board.zobrist_hash()
+    def reset_to_position(self, starting_pos_key, moves):
         if self.history_starting_pos_key != starting_pos_key:
             # 開始位置が異なる場合、ゲーム木を作り直す
             self.gamebegin_node = UctNode()

@@ -181,7 +181,7 @@ class MCTSPlayer(BasePlayer):
 
         # 局面初期化
         self.root_board.reset()
-        self.tree.reset_to_position(self.root_board, [])
+        self.tree.reset_to_position(self.root_board.zobrist_hash(), [])
 
         # 入力特徴量と評価待ちキューを初期化
         self.init_features()
@@ -198,15 +198,16 @@ class MCTSPlayer(BasePlayer):
     def position(self, args):
         if args[0] == 'startpos':
             self.root_board.reset()
+            starting_pos_key = self.root_board.zobrist_hash()
             moves = []
             for move_usi in args[2:]:
                 move = self.root_board.push_usi(move_usi)
                 moves.append(move)
-            self.tree.reset_to_position(self.root_board, moves)
+            self.tree.reset_to_position(starting_pos_key, moves)
 
         elif args[0] == 'sfen':
             self.root_board.set_sfen(' '.join(args[1:]))
-            self.tree.reset_to_position(self.root_board, [])
+            self.tree.reset_to_position(self.root_board.zobrist_hash(), [])
 
         if self.debug:
             print(self.root_board)
@@ -268,7 +269,7 @@ class MCTSPlayer(BasePlayer):
                 return move_to_usi(current_node.child_move[0]), None
 
         # ルートノードが未評価の場合、評価する
-        if current_node.value is None:
+        if current_node.policy is None:
             self.current_batch_index = 0
             self.queue_node(self.root_board, current_node)
             self.eval_node()
