@@ -30,7 +30,7 @@ class BasePlayer:
     def stop(self):
         pass
 
-    def ponderhit(self, last_limits, elapsed):
+    def ponderhit(self, last_limits):
         pass
 
     def quit(self):
@@ -68,24 +68,21 @@ class BasePlayer:
                             if args[i] in ['btime', 'wtime', 'byoyomi', 'binc', 'winc', 'nodes']:
                                 kwargs[args[i]] = int(args[i + 1])
                 self.set_limits(**kwargs)
-                start_time = time.time()
+                # ponderhitのために条件と経過時間を保存
+                last_limits = kwargs
                 self.future = self.executor.submit(self.go)
                 if 'ponder' not in kwargs and 'infinite' not in kwargs:
                     bestmove, ponder_move = self.future.result()
                     print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
-                    # ponderhitのために条件と経過時間を保存
-                    last_limits = kwargs
-                    elapsed = int((time.time() - start_time) *  1000)
             elif cmd[0] == 'stop':
                 self.stop()
                 bestmove, _ = self.future.result()
                 print('bestmove ' + bestmove, flush=True)
             elif cmd[0] == 'ponderhit':
-                start_time = time.time()
-                self.ponderhit(last_limits, elapsed)
+                last_limits['ponder'] = False
+                self.ponderhit(last_limits)
                 bestmove, ponder_move = self.future.result()
                 print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
-                elapsed = int((time.time() - start_time) *  1000)
             elif cmd[0] == 'quit':
                 self.quit()
                 break
