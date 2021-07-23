@@ -255,8 +255,21 @@ class MCTSPlayer(BasePlayer):
         # 探索開始時刻の記録
         self.begin_time = time.time()
 
-        # ルートノードが未展開の場合、展開する
         current_node = self.tree.current_head
+
+        # 詰みの場合
+        if current_node.value == VALUE_WIN:
+            matemove = self.root_board.mate_move(3)
+            if matemove != 0:
+                print('info score mate 3 pv {}'.format(move_to_usi(matemove)), flush=True)
+                return move_to_usi(matemove), None
+        if not self.root_board.is_check():
+            matemove = self.root_board.mate_move_in_1ply()
+            if matemove:
+                print('info score mate 1 pv {}'.format(move_to_usi(matemove)), flush=True)
+                return move_to_usi(matemove), None
+
+        # ルートノードが未展開の場合、展開する
         if current_node.child_move is None:
             current_node.expand_node(self.root_board)
 
@@ -299,15 +312,10 @@ class MCTSPlayer(BasePlayer):
         # すぐに中断する
         self.halt = 0
 
-    def ponderhit(self, last_limits, elapsed):
+    def ponderhit(self, last_limits):
         # 探索開始時刻の記録
         self.begin_time = time.time()
         self.last_pv_print_time = 0
-
-        # 前回のgoで渡された持ち時間から経過時間を引く
-        key = ('btime', 'wtime')[self.root_board.turn]
-        if key in last_limits:
-            last_limits[key] = max(last_limits[key] - elapsed, 0)
 
         # 探索回数の閾値を設定
         self.set_limits(**last_limits)
