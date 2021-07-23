@@ -92,7 +92,7 @@ class MCTSPlayer(BasePlayer):
         self.root_board = Board()
         # ゲーム木
         self.tree = NodeTree()
-        
+
         # プレイアウト回数
         self.playout_count = 0
         # 中断するプレイアウト回数
@@ -194,7 +194,7 @@ class MCTSPlayer(BasePlayer):
         for _ in range(self.batch_size):
             self.queue_node(self.root_board, current_node)
         self.eval_node()
-    
+
     def position(self, args):
         if args[0] == 'startpos':
             self.root_board.reset()
@@ -210,7 +210,7 @@ class MCTSPlayer(BasePlayer):
 
         if self.debug:
             print(self.root_board)
-    
+
     def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
         # 探索回数の閾値を設定
         if infinite or ponder:
@@ -350,7 +350,7 @@ class MCTSPlayer(BasePlayer):
                 # 評価中の葉ノードに達した、もしくはバックアップ済みため破棄する
                 if result == DISCARDED or result != QUEUING:
                     trajectories_batch.pop()
-        
+
             # 評価
             if len(trajectories_batch) > 0:
                 self.eval_node()
@@ -549,7 +549,7 @@ class MCTSPlayer(BasePlayer):
         # 探索延長
         #   21手目以降かつ、残り時間がある場合、
         #   最善手の探索回数が次善手の探索回数の1.5倍未満
-		#   もしくは、勝率が逆なら探索延長する
+        #   もしくは、勝率が逆なら探索延長する
         if self.extend_time and \
            self.root_board.move_number > 20 and \
            self.remaining_time > self.time_limit * 2 and \
