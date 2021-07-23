@@ -261,7 +261,7 @@ class MCTSPlayer(BasePlayer):
             current_node.expand_node(self.root_board)
 
         # 候補手が1つの場合は、その手を返す
-        if len(current_node.child_move) == 1:
+        if self.halt is None and len(current_node.child_move) == 1:
             if current_node.child_move_count[0] > 0:
                 bestmove, bestvalue, ponder_move = self.get_bestmove_and_print_pv()
                 return move_to_usi(bestmove), move_to_usi(ponder_move) if ponder_move else None
@@ -514,7 +514,7 @@ class MCTSPlayer(BasePlayer):
                 ponder_move = pv_node.child_move[selected_index]
 
         print('info nps {} time {} nodes {} score cp {} pv {}'.format(
-            int(self.playout_count / finish_time),
+            int(self.playout_count / finish_time) if finish_time > 0 else 0,
             int(finish_time * 1000),
             current_node.move_count,
             cp, pv), flush=True)
