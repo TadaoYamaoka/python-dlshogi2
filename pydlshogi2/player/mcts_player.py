@@ -241,6 +241,9 @@ class MCTSPlayer(BasePlayer):
                 self.halt = None
 
     def go(self):
+        # 探索開始時刻の記録
+        self.begin_time = time.time()
+
         # 投了チェック
         if self.root_board.is_game_over():
             return 'resign', None
@@ -248,12 +251,6 @@ class MCTSPlayer(BasePlayer):
         # 入玉宣言勝ちチェック
         if self.root_board.is_nyugyoku():
             return 'win', None
-
-        # プレイアウト数をクリア
-        self.playout_count = 0
-
-        # 探索開始時刻の記録
-        self.begin_time = time.time()
 
         current_node = self.tree.current_head
 
@@ -268,6 +265,9 @@ class MCTSPlayer(BasePlayer):
             if matemove:
                 print('info score mate 1 pv {}'.format(move_to_usi(matemove)), flush=True)
                 return move_to_usi(matemove), None
+
+        # プレイアウト数をクリア
+        self.playout_count = 0
 
         # ルートノードが未展開の場合、展開する
         if current_node.child_move is None:

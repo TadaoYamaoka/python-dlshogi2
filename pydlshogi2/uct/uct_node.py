@@ -77,7 +77,7 @@ class NodeTree:
             if old_head == self.current_head:
                 seen_old_head = True
 
-        # 古いヘッドが現れない場合は、以前に検索された位置の祖先である位置がある可能性があることを意味する
+        # 古いヘッドが現れない場合は、以前に探索された位置の祖先である位置がある可能性があることを意味する
         # つまり、古い子が以前にトリミングされていても、current_headは古いデータを保持する可能性がある
         # その場合、current_headをリセットする必要がある
         if not seen_old_head and self.current_head != old_head:
