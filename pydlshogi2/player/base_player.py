@@ -70,11 +70,16 @@ class BasePlayer:
                 self.set_limits(**kwargs)
                 # ponderhitのために条件と経過時間を保存
                 last_limits = kwargs
-                self.future = self.executor.submit(self.go)
-                if 'ponder' not in kwargs and 'infinite' not in kwargs:
-                    bestmove, ponder_move = self.future.result()
-                    print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
+                need_print_bestmove = 'ponder' not in kwargs and 'infinite' not in kwargs
+
+                def go_and_print_bestmove():
+                    bestmove, ponder_move = self.go()
+                    if need_print_bestmove:
+                        print('bestmove ' + bestmove + (' ponder ' + ponder_move if ponder_move else ''), flush=True)
+                    return bestmove, ponder_move
+                self.future = self.executor.submit(go_and_print_bestmove)
             elif cmd[0] == 'stop':
+                need_print_bestmove = False
                 self.stop()
                 bestmove, _ = self.future.result()
                 print('bestmove ' + bestmove, flush=True)
