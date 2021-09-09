@@ -58,11 +58,11 @@ class PolicyValueNetwork(nn.Module):
 
         # policy head
         policy = self.policy_conv(x)
-        policy = self.policy_bias(policy.view(-1, MOVE_LABELS_NUM))
+        policy = self.policy_bias(torch.flatten(policy, 1))
 
         # value head
         value = F.relu(self.value_norm1(self.value_conv1(x)))
-        value = F.relu(self.value_fc1(value.view(-1, MOVE_LABELS_NUM)))
+        value = F.relu(self.value_fc1(torch.flatten(value, 1)))
         value = self.value_fc2(value)
 
         return policy, value
