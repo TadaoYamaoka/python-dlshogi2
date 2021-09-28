@@ -38,7 +38,7 @@ for file_list, f in zip([file_list_train, file_list_test], [f_train, f_test]):
             if len(kif.moves) < args.filter_moves:
                 continue
             # レーティングの低いエンジンの対局を除外
-            if args.filter_rating > 0 and mint(kif.ratings) < args.filter_rating:
+            if args.filter_rating > 0 and min(kif.ratings) < args.filter_rating:
                 continue
 
             # 開始局面を設定
