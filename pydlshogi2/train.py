@@ -34,7 +34,7 @@ else:
 model = PolicyValueNetwork()
 model.to(device)
 
-# オプティマイザー
+# オプティマイザ
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.0001)
 
 # 損失関数
