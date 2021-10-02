@@ -40,7 +40,7 @@ class UctNode:
                         self.policy = None
                         self.child_node = [self.child_node[i]]
                     return self.child_node[0]
-            
+
         # 子ノードが見つからなかった場合、または子ノードが未展開、または子ノードリストが未初期化の場合
         self.child_move = [move]
         self.child_move_count = None
