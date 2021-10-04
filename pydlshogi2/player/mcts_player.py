@@ -482,9 +482,9 @@ class MCTSPlayer(BasePlayer):
             u = 1.0
         else:
             u = np.sqrt(np.float32(node.move_count)) / (1 + node.child_move_count)
-        ucb1 = q + self.c_puct * u * node.policy
+        ucb = q + self.c_puct * u * node.policy
 
-        return np.argmax(ucb1)
+        return np.argmax(ucb)
 
     # 最善手取得とinfoの表示
     def get_bestmove_and_print_pv(self):
