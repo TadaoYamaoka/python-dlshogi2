@@ -12,7 +12,7 @@ class OnnxPlayer(MCTSPlayer):
 
     # モデルのロード
     def load_model(self):
-        self.session = onnxruntime.InferenceSession(self.modelfile)
+        self.session = onnxruntime.InferenceSession(self.modelfile, providers=['CUDAExecutionProvider'])
 
     # 入力特徴量の初期化
     def init_features(self):
