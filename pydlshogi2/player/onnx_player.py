@@ -4,9 +4,9 @@ import numpy as np
 from pydlshogi2.player.mcts_player import MCTSPlayer
 from cshogi.dlshogi import make_input_features, make_move_label, FEATURES1_NUM, FEATURES2_NUM
 
-class GCTPlayer(MCTSPlayer):
+class OnnxPlayer(MCTSPlayer):
     # USIエンジンの名前
-    name = 'python-gct'
+    name = 'python-dlshogi-onnx'
     # デフォルトモデル
     DEFAULT_MODELFILE = 'model/model-0000167.onnx'
 
@@ -42,5 +42,5 @@ class GCTPlayer(MCTSPlayer):
         return make_move_label(move, color)
 
 if __name__ == '__main__':
-    player = GCTPlayer()
+    player = OnnxPlayer()
     player.run()
