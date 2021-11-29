@@ -315,6 +315,9 @@ class MCTSPlayer(BasePlayer):
         self.begin_time = time.time()
         self.last_pv_print_time = 0
 
+        # プレイアウト数をクリア
+        self.playout_count = 0
+
         # 探索回数の閾値を設定
         self.set_limits(**last_limits)
 
