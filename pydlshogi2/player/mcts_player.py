@@ -167,7 +167,7 @@ class MCTSPlayer(BasePlayer):
 
     # 入力特徴量の初期化
     def init_features(self):
-        self.features = torch.empty((self.batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=True)
+        self.features = torch.empty((self.batch_size, FEATURES_NUM, 9, 9), dtype=torch.float32, pin_memory=(self.gpu_id >= 0))
 
     def isready(self):
         # デバイス
