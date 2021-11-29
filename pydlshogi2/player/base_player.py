@@ -18,7 +18,7 @@ class BasePlayer:
     def isready(self):
         pass
 
-    def position(self, args):
+    def position(self, sfen, usi_moves):
         pass
 
     def set_limits(self, btime=None, wtime=None, byoyomi=None, binc=None, winc=None, nodes=None, infinite=False, ponder=False):
@@ -53,8 +53,8 @@ class BasePlayer:
             elif cmd[0] == 'usinewgame':
                 self.usinewgame()
             elif cmd[0] == 'position':
-                moves = cmd[1].split(' ')
-                self.position(moves)
+                args = cmd[1].split('moves')
+                self.position(args[0].strip(), args[1].split() if len(args) > 1 else [])
             elif cmd[0] == 'go':
                 kwargs = {}
                 if len(cmd) > 1:

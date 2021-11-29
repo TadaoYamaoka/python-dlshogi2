@@ -195,19 +195,17 @@ class MCTSPlayer(BasePlayer):
             self.queue_node(self.root_board, current_node)
         self.eval_node()
 
-    def position(self, args):
-        if args[0] == 'startpos':
+    def position(self, sfen, usi_moves):
+        if sfen == 'startpos':
             self.root_board.reset()
-            starting_pos_key = self.root_board.zobrist_hash()
-            moves = []
-            for move_usi in args[2:]:
-                move = self.root_board.push_usi(move_usi)
-                moves.append(move)
-            self.tree.reset_to_position(starting_pos_key, moves)
+        elif sfen[:5] == 'sfen ':
+            self.root_board.set_sfen(sfen[5:])
 
-        elif args[0] == 'sfen':
-            self.root_board.set_sfen(' '.join(args[1:]))
-            self.tree.reset_to_position(self.root_board.zobrist_hash(), [])
+        moves = []
+        for usi_move in usi_moves:
+            move = self.root_board.push_usi(usi_move)
+            moves.append(move)
+        self.tree.reset_to_position(self.root_board.zobrist_hash(), moves)
 
         if self.debug:
             print(self.root_board)
