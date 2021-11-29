@@ -315,6 +315,11 @@ class MCTSPlayer(BasePlayer):
         self.begin_time = time.time()
         self.last_pv_print_time = 0
 
+        # 候補手が1つの場合、中断してその手を返す
+        if len(self.tree.current_head.child_move) == 1:
+            self.stop()
+            return
+
         # 探索回数の閾値を設定
         self.set_limits(**last_limits)
 
