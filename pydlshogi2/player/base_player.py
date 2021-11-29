@@ -61,9 +61,10 @@ class BasePlayer:
                     args = cmd[1].split(' ')
                     if args[0] == 'infinite':
                         kwargs['infinite'] = True
-                    elif args[0] == 'ponder':
-                        kwargs['ponder'] = True
                     else:
+                        if args[0] == 'ponder':
+                            kwargs['ponder'] = True
+                            args = args[1:]
                         for i in range(0, len(args) - 1, 2):
                             if args[i] in ['btime', 'wtime', 'byoyomi', 'binc', 'winc', 'nodes']:
                                 kwargs[args[i]] = int(args[i + 1])
