@@ -315,11 +315,6 @@ class MCTSPlayer(BasePlayer):
         self.begin_time = time.time()
         self.last_pv_print_time = 0
 
-        # 候補手が1つの場合、中断してその手を返す
-        if len(self.tree.current_head.child_move) == 1:
-            self.stop()
-            return
-
         # 探索回数の閾値を設定
         self.set_limits(**last_limits)
 
@@ -538,6 +533,11 @@ class MCTSPlayer(BasePlayer):
         if self.halt is not None:
             return self.playout_count >= self.halt
 
+        # 候補手が1つの場合、中断する
+        current_node = self.tree.current_head
+        if len(current_node.child_move) == 1:
+            return True
+
         # 消費時間
         spend_time = int((time.time() - self.begin_time) * 1000)
 
@@ -546,7 +546,6 @@ class MCTSPlayer(BasePlayer):
             return False
 
         # 探索回数が最も多い手と次に多い手を求める
-        current_node = self.tree.current_head
         child_move_count = current_node.child_move_count
         second_index, first_index = np.argpartition(child_move_count, -2)[-2:]
         second, first = child_move_count[[second_index, first_index]]
