@@ -511,6 +511,7 @@ class MCTSPlayer(BasePlayer):
 
         # PV
         pv = move_to_usi(bestmove)
+        depth = 1
         ponder_move = None
         pv_node = current_node
         while pv_node.child_node:
@@ -521,12 +522,13 @@ class MCTSPlayer(BasePlayer):
             pv += ' ' + move_to_usi(pv_node.child_move[selected_index])
             if ponder_move is None:
                 ponder_move = pv_node.child_move[selected_index]
+            depth+=1
 
-        print('info nps {} time {} nodes {} score cp {} pv {}'.format(
+        print('info nps {} time {} nodes {} score cp {} depth {} pv {}'.format(
             int(self.playout_count / finish_time) if finish_time > 0 else 0,
             int(finish_time * 1000),
             current_node.move_count,
-            cp, pv), flush=True)
+            cp, depth, pv), flush=True)
 
         return bestmove, bestvalue, ponder_move
 
