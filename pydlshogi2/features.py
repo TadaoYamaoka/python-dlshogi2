@@ -46,34 +46,33 @@ def make_move_label(move, color):
             from_sq = 80 - from_sq
 
         # 移動方向
-        to_y, to_x = divmod(to_sq, 9)
-        from_y, from_x = divmod(from_sq, 9)
+        to_x, to_y = divmod(to_sq, 9)
+        from_x, from_y = divmod(from_sq, 9)
         dir_x = to_x - from_x
         dir_y = to_y - from_y
         if dir_y < 0:
             if dir_x == 0:
                 move_direction = UP
+            elif dir_y == -2 and dir_x == -1:
+                move_direction = UP2_RIGHT
+            elif dir_y == -2 and dir_x == 1:
+                move_direction = UP2_LEFT
             elif dir_x < 0:
-                move_direction = UP_LEFT
-            else:  # dir_x > 0
                 move_direction = UP_RIGHT
+            else:  # dir_x > 0
+                move_direction = UP_LEFT
         elif dir_y == 0:
             if dir_x < 0:
-                move_direction = LEFT
-            else:  # dir_x > 0
                 move_direction = RIGHT
-        elif dir_y > 0:
+            else:  # dir_x > 0
+                move_direction = LEFT
+        else:  # dir_y > 0
             if dir_x == 0:
                 move_direction = DOWN
             elif dir_x < 0:
-                move_direction = DOWN_LEFT
-            else:  # dir_x > 0
                 move_direction = DOWN_RIGHT
-        else:  # dir_y == -2
-            if dir_x == -1:
-                move_direction = UP2_LEFT
-            else:  # dir_x == 1
-                move_direction = UP2_RIGHT
+            else:  # dir_x > 0
+                move_direction = DOWN_LEFT
 
         # 成り
         if move_is_promotion(move):
