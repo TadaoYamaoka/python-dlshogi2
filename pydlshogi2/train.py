@@ -183,9 +183,9 @@ for e in range(args.epoch):
     # テストデータの検証結果をログ表示
     logging.info('epoch = {}, steps = {}, train loss avr = {:.07f}, {:.07f}, {:.07f}, test loss = {:.07f}, {:.07f}, {:.07f}, test accuracy = {:.07f}, {:.07f}'.format(
         epoch, t,
-        sum_test_loss_policy / test_steps,
-        sum_test_loss_value / test_steps,
-        (sum_test_loss_policy + sum_test_loss_value) / test_steps,
+        sum_loss_policy_epoch / steps_epoch,
+        sum_loss_value_epoch / steps_epoch,
+        (sum_loss_policy_epoch + sum_loss_value_epoch) / steps_epoch,
         sum_test_loss_policy / test_steps,
         sum_test_loss_value / test_steps,
         (sum_test_loss_policy + sum_test_loss_value) / test_steps,
