@@ -201,11 +201,13 @@ class MCTSPlayer(BasePlayer):
         elif sfen[:5] == 'sfen ':
             self.root_board.set_sfen(sfen[5:])
 
+        starting_pos_key = self.root_board.zobrist_hash()
+
         moves = []
         for usi_move in usi_moves:
             move = self.root_board.push_usi(usi_move)
             moves.append(move)
-        self.tree.reset_to_position(self.root_board.zobrist_hash(), moves)
+        self.tree.reset_to_position(starting_pos_key, moves)
 
         if self.debug:
             print(self.root_board)
